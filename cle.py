@@ -6,10 +6,10 @@ class Cle():
         self.tags = []
         self.anchors = []
         self.cfg = cfg
-        self.company = msg["company"]
-        self.room = msg["room"]
+        self.organization = msg["data"]["organization"]
+        self.roomid = msg["data"]["roomid"]
 
-        for data in msg["anchors"]:
+        for data in msg["data"]["anchors"]:
             print(data)
             anchor = Anchor(data, cfg, self)
             self.anchors.append(anchor)

@@ -11,14 +11,14 @@ class Anchor():
         self.x = msg["x"]
         self.y = msg["y"]
         self.z = msg["z"]
-        self.Role = msg["Role"]
-        self.master_number = msg["master_number"]
-        self.ID = msg["ID"]
+        self.Role = msg["role"]
+        self.master_number = msg["masternumber"]
+        self.ID = msg["name"]
         self.data2sendflag = 0
         self.T_max = cfg.T_max
         self.c = cfg.c
-        self.company = cle.company
-        self.room = cle.room
+        self.organization = cle.organization
+        self.roomid = cle.roomid
 
         self.master = []
         self.master_ID = []

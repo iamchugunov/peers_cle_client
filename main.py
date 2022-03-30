@@ -1,5 +1,10 @@
+import threading
+from ctypes import wstring_at
 import json
-import socket
+
+import time
+
+import websocket
 import commands as co
 import time
 from cle import Cle
@@ -8,10 +13,13 @@ from tag import Tag
 
 
 def process_config(msg, CLE, cfg):
+    print("MSG3: ")
+    print("process_config")
     cle = get_current_cle(msg, CLE)
     if cle:
         CLE.remove(cle)
     cle = Cle(msg, cfg)
+    print("New CLE")    
     CLE.append(cle)
 
 
@@ -62,10 +70,14 @@ def process_BLINK(msg, cle):
             co.send_to_server(data2send, output)
             tag.data2sendflag = 0
 
+
 def get_current_cle(msg, CLE):
+    print("MSG4: ")
+    print("get_current_cle")
+    print(msg)
     cle = []
     for cle in CLE:
-        if cle.company == msg["company"] and cle.room == msg["room"]:
+        if cle.organization == msg["data"]["organization"] and cle.roomid == msg["data"]["roomid"]:
             break
     return cle
 
@@ -81,9 +93,10 @@ def get_tag_info(tag):
     tag_info["lifetime"] = tag.lifetime
     tag_info["time"] = time.strftime("%d.%m.%Y %H:%M:%S", time.localtime(tag.lasttime))
     tag_info["anchors"] = tag.anchors_number_to_solve
-    tag_info["company"] = tag.company
-    tag_info["room"] = tag.room
+    tag_info["organization"] = tag.organization
+    tag_info["roomid"] = tag.roomid
     return tag_info
+
 
 def get_anchor_info(anchor):
     anchor_info = {}
@@ -96,26 +109,81 @@ def get_anchor_info(anchor):
     anchor_info["y"] = anchor.y
     anchor_info["z"] = anchor.z
     anchor_info["sync_flag"] = anchor.sync_flag
-    anchor_info["company"] = anchor.company
-    anchor_info["room"] = anchor.room
+    anchor_info["organization"] = anchor.organization
+    anchor_info["roomid"] = anchor.roomid
     return anchor_info
 
 
+def on_message(ws, message):
+    print("MSG: ")
+    print(message)
+    data = json.loads(message)
+    if data["action"] == "room_config":
+        print("MSG2: ")
+        print("room_config")
+        process_config(data, CLE, cfg)
+        print("room_config: ok")
+    elif data["action"] == "CS_TX":
+        cle = get_current_cle(data, CLE)
+        if cle:
+            process_TX(data, cle)
+    elif data["action"] == "CS_RX":
+        cle = get_current_cle(data, CLE)
+        if cle:
+            process_RX(data, cle)
+    elif data["action"] == "BLINK":
+        cle = get_current_cle(data, CLE)
+        if cle:
+            process_BLINK(data, cle)
+    elif data["action"] == "Login":
+        print("Login succsess")
+        
+
+def on_error(ws, error):
+    print(error)
+
+def on_close(ws):
+    print("### closed ###")
+    ws.close()
+
+def on_open(ws):
+    ws.send("{\"action\":\"Login\",\"login\":\"mathLogin\",\"password\":\"%wPp7VO6k7ump{BP4mu2rm4w?p|J5N%P\",\"roomid\":\"1\"}")
+            
 
 if __name__ == "__main__":
 
+    '''
     with open("ipconfig.json", "r") as file:
         ipconfig = (json.loads(file.read()))
+    '''
 
     cfg = Config()
     CLE = []
 
-    input = socket.socket()
-    input.connect((ipconfig["IP"], ipconfig["PORT1"]))
+    #input = socket.socket()
+    #input.connect((ipconfig["IP"], ipconfig["PORT1"]))
 
-    output = socket.socket()
-    output.connect((ipconfig["IP"], ipconfig["PORT2"]))
+    #output = socket.socket()
+    #output.connect((ipconfig["IP"], ipconfig["PORT2"]))
+    websocket.enableTrace(True)
+    input = websocket.WebSocketApp("ws://10.3.168.114:9000",
+                                on_message = on_message,
+                                on_error = on_error,
+                                on_close = on_close)
+    '''
+    output = websockets.WebSocketApp("ws://10.3.168.114:9001",
+                                on_message = on_message,
+                                on_error = on_error,
+                                on_close = on_close)
+    '''
 
+    input.on_open = on_open
+    input.run_forever()
+
+    #output.on_open = on_open
+    #output.run_forever()
+
+'''
     while True:
         data = co.receive_from_server(input)
         if data["type"] == "room_config":
@@ -132,4 +200,4 @@ if __name__ == "__main__":
             cle = get_current_cle(data, CLE)
             if cle:
                 process_BLINK(data, cle)
-
+'''
